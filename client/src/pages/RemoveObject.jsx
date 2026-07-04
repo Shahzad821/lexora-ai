@@ -1,7 +1,152 @@
-import React from "react";
+import { useEffect, useState } from "react";
+import { Brush, Download, Scissors, UploadCloud } from "lucide-react";
+import {
+  FieldLabel,
+  PageHeader,
+  PrimaryButton,
+  ResultPanel,
+  ToolCard,
+} from "../components/DashboardShell";
+
+const brushSizes = ["Small", "Medium", "Large"];
 
 const RemoveObject = () => {
-  return <div>RemoveObject</div>;
+  const [fileName, setFileName] = useState("");
+  const [preview, setPreview] = useState("");
+  const [brushSize, setBrushSize] = useState("Medium");
+  const [processed, setProcessed] = useState(false);
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setFileName(file.name);
+    setPreview(URL.createObjectURL(file));
+    setProcessed(false);
+  };
+
+  const handleBrushSizeChange = (selectedBrushSize) => {
+    setBrushSize(selectedBrushSize);
+  };
+
+  const handleRemoveObject = () => {
+    setProcessed(true);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Image cleanup"
+        title="Object Removal"
+        description="Upload an image, mark the unwanted area, and let Lexora rebuild the background."
+        action="Recent edits"
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <ToolCard
+          title="Edit setup"
+          description="Select a source image and choose the brush size for object masking."
+          icon={Scissors}
+        >
+          <div className="space-y-5">
+            <div>
+              <FieldLabel>Source file</FieldLabel>
+              <label className="flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center transition hover:border-primary hover:bg-primary/5">
+                {preview ? (
+                  <img
+                    src={preview}
+                    alt={fileName}
+                    className="max-h-36 rounded-xl object-contain shadow-sm"
+                  />
+                ) : (
+                  <UploadCloud className="h-9 w-9 text-primary" />
+                )}
+                <span className="mt-3 text-sm font-semibold text-slate-950">
+                  {fileName || "Upload image"}
+                </span>
+                <span className="mt-2 text-xs text-slate-500">
+                  PNG, JPG, or WEBP
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <div>
+              <FieldLabel>Brush size</FieldLabel>
+              <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-1">
+                {brushSizes.map((size) => (
+                  <button
+                    type="button"
+                    key={size}
+                    onClick={() => handleBrushSizeChange(size)}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                      brushSize === size
+                        ? "bg-white text-primary shadow-sm"
+                        : "text-slate-500 hover:text-slate-950"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
+            Selected brush: {brushSize}
+          </div>
+
+          <PrimaryButton
+            icon={Brush}
+            onClick={handleRemoveObject}
+            disabled={!preview}
+          >
+            Remove selected object
+          </PrimaryButton>
+        </ToolCard>
+
+        <ResultPanel
+          icon={Scissors}
+          emptyTitle="Edited image preview"
+          emptyDescription="Your cleaned image will appear here after the masked object is removed."
+        >
+          {processed && preview && (
+            <div className="w-full">
+              <div className="relative overflow-hidden rounded-2xl bg-slate-100">
+                <img
+                  src={preview}
+                  alt={fileName}
+                  className="max-h-96 w-full object-contain"
+                />
+                <div className="absolute right-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-primary shadow-sm">
+                  {brushSize} brush processed
+                </div>
+              </div>
+              <a
+                href={preview}
+                download={`lexora-object-removed-${fileName}`}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:border-primary/30 hover:text-primary"
+              >
+                <Download className="h-4 w-4" />
+                Download edit
+              </a>
+            </div>
+          )}
+        </ResultPanel>
+      </div>
+    </div>
+  );
 };
 
 export default RemoveObject;

@@ -3,6 +3,20 @@
 * {
   font-family: "Outfit", sans-serif;
 }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 @theme {
   --color-primary: #5044e5;
+}
+.reset-tw,
+.reset-tw * {
+  all: revert !important;
+}
+.cl-drawerRoot {
+  z-index: 10;
 }
