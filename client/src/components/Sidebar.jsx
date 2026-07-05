@@ -1,4 +1,4 @@
-import { UserButton, useClerk, useUser } from "@clerk/react";
+import { UserButton, useAuth, useClerk, useUser } from "@clerk/react";
 
 import {
   ChevronLeft,
@@ -16,10 +16,16 @@ import { AiToolsData, assets } from "../assets/assets";
 const Sidebar = () => {
   const [open, setOpen] = useState(false);
   const { user } = useUser();
+  const { has } = useAuth();
   const { signOut } = useClerk();
   const navigate = useNavigate();
 
-  const isPremium = user?.publicMetadata?.plan === "premium";
+  const metadataPlan = String(user?.publicMetadata?.plan || "").toLowerCase();
+  const isPremium =
+    has?.({ plan: "premium" }) ||
+    has?.({ plan: "user:premium" }) ||
+    metadataPlan === "premium" ||
+    metadataPlan === "user:premium";
   const planLabel = isPremium ? "Premium plan active" : "Free plan active";
 
   const navItems = [

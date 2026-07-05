@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useAuth } from "@clerk/react";
 import { CheckCircle2, FileText, PenLine, Send } from "lucide-react";
+import Markdown from "react-markdown";
 import {
   FieldLabel,
   PageHeader,
@@ -7,6 +9,7 @@ import {
   ResultPanel,
   ToolCard,
 } from "../components/DashboardShell";
+import { apiRequest } from "../lib/api";
 
 const articleLengths = ["Short", "Medium", "Long"];
 
@@ -16,6 +19,9 @@ const WriteArticle = () => {
   const [tone, setTone] = useState("Professional");
   const [audience, setAudience] = useState("");
   const [article, setArticle] = useState("");
+  const [error, setError] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { getToken, isSignedIn } = useAuth();
 
   const handleTopicChange = (event) => {
     setTopic(event.target.value);
@@ -33,23 +39,36 @@ const WriteArticle = () => {
     setAudience(event.target.value);
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!topic.trim()) return;
 
-    const targetAudience = audience.trim() || "your target readers";
-    setArticle(`# ${topic.trim()}
+    if (!isSignedIn) {
+      setError("Please sign in to generate an article.");
+      return;
+    }
 
-## Overview
-This ${length.toLowerCase()} ${tone.toLowerCase()} article draft is written for ${targetAudience}. It opens with the core problem, explains why it matters, and gives readers a practical path forward.
+    setError("");
+    setIsGenerating(true);
 
-## Key Points
-- Define the reader's current challenge in plain language.
-- Explain the main idea with concrete examples.
-- Add practical steps, tradeoffs, and measurable outcomes.
-- Close with a clear takeaway that helps the reader act.
+    try {
+      const token = await getToken();
+      const data = await apiRequest("/api/ai/generate-article", {
+        method: "POST",
+        token,
+        body: {
+          prompt: topic.trim(),
+          length,
+          tone,
+          audience: audience.trim(),
+        },
+      });
 
-## Draft Direction
-Use this as the local placeholder response before the Grok API is connected. The API can replace this generated text while keeping the same page state and result panel.`);
+      setArticle(data.content);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -61,7 +80,7 @@ Use this as the local placeholder response before the Grok API is connected. The
         action="View drafts"
       />
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <ToolCard
           title="Article brief"
           description="Give Lexora enough context to create a useful first draft."
@@ -136,12 +155,18 @@ Use this as the local placeholder response before the Grok API is connected. The
             Selected: {length} article / {tone} tone
           </div>
 
+          {error && (
+            <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
+              {error}
+            </div>
+          )}
+
           <PrimaryButton
             icon={Send}
             onClick={handleGenerate}
-            disabled={!topic.trim()}
+            disabled={!topic.trim() || isGenerating}
           >
-            Generate article
+            {isGenerating ? "Generating..." : "Generate article"}
           </PrimaryButton>
         </ToolCard>
 
@@ -151,12 +176,14 @@ Use this as the local placeholder response before the Grok API is connected. The
           emptyDescription="Generated drafts keep headings, paragraphs, and suggested edits in one clean reading panel."
         >
           {article && (
-            <div className="h-full w-full overflow-auto rounded-xl bg-white p-5 text-sm leading-7 text-slate-700 shadow-sm">
+            <div className="h-full w-full min-w-0 overflow-auto rounded-xl bg-white p-5 text-sm leading-7 text-slate-700 shadow-sm">
               <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-emerald-600">
                 <CheckCircle2 className="h-4 w-4" />
                 Draft generated
               </div>
-              <pre className="whitespace-pre-wrap font-sans">{article}</pre>
+              <div className="markdown-content">
+                <Markdown>{article}</Markdown>
+              </div>
             </div>
           )}
         </ResultPanel>

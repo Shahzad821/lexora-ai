@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/react";
 import { Download, Eraser, ImageUp, UploadCloud } from "lucide-react";
 import {
   FieldLabel,
@@ -7,23 +8,54 @@ import {
   ResultPanel,
   ToolCard,
 } from "../components/DashboardShell";
+import { apiRequest } from "../lib/api";
 
 const RemoveBackground = () => {
+  const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState("");
   const [preview, setPreview] = useState("");
-  const [processed, setProcessed] = useState(false);
+  const [processedUrl, setProcessedUrl] = useState("");
+  const [error, setError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { getToken, isSignedIn } = useAuth();
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setFile(file);
     setFileName(file.name);
     setPreview(URL.createObjectURL(file));
-    setProcessed(false);
+    setProcessedUrl("");
   };
 
-  const handleRemoveBackground = () => {
-    setProcessed(true);
+  const handleRemoveBackground = async () => {
+    if (!file) return;
+
+    if (!isSignedIn) {
+      setError("Please sign in to remove an image background.");
+      return;
+    }
+
+    setError("");
+    setIsProcessing(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const token = await getToken();
+      const data = await apiRequest("/api/ai/remove-background", {
+        method: "POST",
+        token,
+        body: formData,
+      });
+
+      setProcessedUrl(data.content);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   useEffect(() => {
@@ -41,7 +73,7 @@ const RemoveBackground = () => {
         action="Batch history"
       />
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <ToolCard
           title="Upload image"
           description="Best results come from clear subject edges and high-resolution source files."
@@ -75,10 +107,16 @@ const RemoveBackground = () => {
           <PrimaryButton
             icon={Eraser}
             onClick={handleRemoveBackground}
-            disabled={!preview}
+            disabled={!preview || isProcessing}
           >
-            Remove background
+            {isProcessing ? "Processing..." : "Remove background"}
           </PrimaryButton>
+
+          {error && (
+            <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
+              {error}
+            </div>
+          )}
         </ToolCard>
 
         <ResultPanel
@@ -86,17 +124,17 @@ const RemoveBackground = () => {
           emptyTitle="Clean image preview"
           emptyDescription="The transparent-background result will be ready here with download and publish actions."
         >
-          {processed && preview && (
-            <div className="w-full">
+          {processedUrl && (
+            <div className="w-full min-w-0">
               <div className="rounded-2xl bg-[linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%),linear-gradient(45deg,#e2e8f0_25%,transparent_25%,transparent_75%,#e2e8f0_75%)] bg-[length:24px_24px] bg-[position:0_0,12px_12px] p-4">
                 <img
-                  src={preview}
+                  src={processedUrl}
                   alt={fileName}
                   className="mx-auto max-h-96 rounded-xl object-contain"
                 />
               </div>
               <a
-                href={preview}
+                href={processedUrl}
                 download={`lexora-bg-removed-${fileName}`}
                 className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:border-primary/30 hover:text-primary"
               >

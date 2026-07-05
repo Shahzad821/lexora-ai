@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@clerk/react";
 import { Download, Palette, Send } from "lucide-react";
 import {
   FieldLabel,
@@ -8,6 +9,7 @@ import {
   ToolCard,
 } from "../components/DashboardShell";
 import { dummyPublishedCreationData } from "../assets/assets";
+import { apiRequest } from "../lib/api";
 
 const styles = ["Realistic", "Anime", "3D", "Watercolor"];
 
@@ -16,6 +18,9 @@ const GenerateImages = () => {
   const [style, setStyle] = useState("Realistic");
   const [publish, setPublish] = useState(false);
   const [generatedImage, setGeneratedImage] = useState(null);
+  const [error, setError] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { getToken, isSignedIn } = useAuth();
 
   const handlePromptChange = (event) => {
     setPrompt(event.target.value);
@@ -29,18 +34,39 @@ const GenerateImages = () => {
     setPublish(event.target.checked);
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
-    const styleIndex = styles.indexOf(style);
-    const image =
-      dummyPublishedCreationData[styleIndex % dummyPublishedCreationData.length];
+    if (!isSignedIn) {
+      setError("Please sign in to generate an image.");
+      return;
+    }
 
-    setGeneratedImage({
-      ...image,
-      prompt: `${prompt.trim()} in ${style} style`,
-      publish,
-    });
+    setError("");
+    setIsGenerating(true);
+
+    try {
+      const token = await getToken();
+      const data = await apiRequest("/api/ai/generate-image", {
+        method: "POST",
+        token,
+        body: {
+          prompt: prompt.trim(),
+          style,
+          publish,
+        },
+      });
+
+      setGeneratedImage(data.creation || {
+        content: data.content,
+        prompt: `${prompt.trim()} in ${style} style`,
+        publish,
+      });
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -52,7 +78,7 @@ const GenerateImages = () => {
         action="Gallery"
       />
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <ToolCard
           title="Image prompt"
           description="Use concrete subjects, mood, environment, and style details."
@@ -105,12 +131,18 @@ const GenerateImages = () => {
             Selected: {style} / {publish ? "Public" : "Private"}
           </div>
 
+          {error && (
+            <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
+              {error}
+            </div>
+          )}
+
           <PrimaryButton
             icon={Send}
             onClick={handleGenerate}
-            disabled={!prompt.trim()}
+            disabled={!prompt.trim() || isGenerating}
           >
-            Generate image
+            {isGenerating ? "Generating..." : "Generate image"}
           </PrimaryButton>
         </ToolCard>
 
@@ -123,15 +155,15 @@ const GenerateImages = () => {
           }
         >
           {generatedImage ? (
-            <div className="w-full">
+            <div className="w-full min-w-0">
               <img
                 src={generatedImage.content}
                 alt={generatedImage.prompt}
                 className="aspect-[4/3] w-full rounded-xl object-cover shadow-sm"
               />
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-semibold text-slate-950">
                     {generatedImage.prompt}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">

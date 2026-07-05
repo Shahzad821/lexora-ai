@@ -13,9 +13,70 @@
 @theme {
   --color-primary: #5044e5;
 }
-.reset-tw,
-.reset-tw * {
-  all: revert !important;
+.markdown-content {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.markdown-content > * + * {
+  margin-top: 0.875rem;
+}
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  color: #020617;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.markdown-content h1 {
+  font-size: 1.5rem;
+}
+.markdown-content h2 {
+  font-size: 1.25rem;
+}
+.markdown-content h3 {
+  font-size: 1.125rem;
+}
+.markdown-content p,
+.markdown-content li {
+  color: #475569;
+  line-height: 1.75;
+}
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.25rem;
+}
+.markdown-content ul {
+  list-style: disc;
+}
+.markdown-content ol {
+  list-style: decimal;
+}
+.markdown-content blockquote {
+  border-left: 3px solid #cbd5e1;
+  color: #64748b;
+  padding-left: 1rem;
+}
+.markdown-content pre,
+.markdown-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.markdown-content pre {
+  border-radius: 0.75rem;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 1rem;
+}
+.markdown-content code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
 }
 .cl-drawerRoot {
   z-index: 10;

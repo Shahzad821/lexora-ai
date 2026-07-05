@@ -1,37 +1,70 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@clerk/react";
 import { Heart, Image, MessageCircle, Search, Users } from "lucide-react";
-import { dummyPublishedCreationData } from "../assets/assets";
 import { PageHeader } from "../components/DashboardShell";
+import { apiRequest } from "../lib/api";
 
 const Community = () => {
   const [query, setQuery] = useState("");
-  const [likedIds, setLikedIds] = useState([]);
+  const [creations, setCreations] = useState([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const { getToken, userId } = useAuth();
+
+  useEffect(() => {
+    const loadPublishedCreations = async () => {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const token = await getToken();
+        const data = await apiRequest("/api/ai/published-creations", { token });
+        setCreations(data.creations || []);
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPublishedCreations();
+  }, [getToken]);
 
   const filteredCreations = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return dummyPublishedCreationData;
+    if (!normalizedQuery) return creations;
 
-    return dummyPublishedCreationData.filter((creation) =>
+    return creations.filter((creation) =>
       creation.prompt.toLowerCase().includes(normalizedQuery),
     );
-  }, [query]);
+  }, [creations, query]);
 
-  const totalLikes =
-    dummyPublishedCreationData.reduce(
-      (sum, creation) => sum + creation.likes.length,
-      0,
-    ) + likedIds.length;
+  const totalLikes = creations.reduce(
+    (sum, creation) => sum + creation.likes.length,
+    0,
+  );
+  const creatorCount = new Set(creations.map((creation) => creation.user_id)).size;
 
   const handleSearchChange = (event) => {
     setQuery(event.target.value);
   };
 
-  const handleLikeToggle = (id) => {
-    setLikedIds((current) =>
-      current.includes(id)
-        ? current.filter((likedId) => likedId !== id)
-        : [...current, id],
-    );
+  const handleLikeToggle = async (id) => {
+    try {
+      const token = await getToken();
+      const data = await apiRequest(`/api/ai/published-creations/${id}/like`, {
+        method: "POST",
+        token,
+      });
+
+      setCreations((current) =>
+        current.map((creation) =>
+          creation.id === id ? data.creation : creation,
+        ),
+      );
+    } catch (requestError) {
+      setError(requestError.message);
+    }
   };
 
   return (
@@ -49,7 +82,7 @@ const Community = () => {
             <Image className="h-5 w-5" />
           </div>
           <p className="mt-4 text-3xl font-semibold text-slate-950">
-            {dummyPublishedCreationData.length}
+            {creations.length}
           </p>
           <p className="mt-1 text-sm text-slate-500">Published visuals</p>
         </div>
@@ -66,14 +99,16 @@ const Community = () => {
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
             <Users className="h-5 w-5" />
           </div>
-          <p className="mt-4 text-3xl font-semibold text-slate-950">2</p>
+          <p className="mt-4 text-3xl font-semibold text-slate-950">
+            {creatorCount}
+          </p>
           <p className="mt-1 text-sm text-slate-500">Active creators</p>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+        <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
             <h2 className="text-lg font-semibold text-slate-950">
               Community feed
             </h2>
@@ -93,11 +128,23 @@ const Community = () => {
           </label>
         </div>
 
-        {filteredCreations.length > 0 ? (
+        {isLoading && (
+          <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-8 text-center text-sm text-slate-500">
+            Loading published creations...
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-6 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-medium text-rose-600">
+            {error}
+          </div>
+        )}
+
+        {!isLoading && !error && filteredCreations.length > 0 ? (
           <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {filteredCreations.map((creation) => {
-              const liked = likedIds.includes(creation.id);
-              const likeCount = creation.likes.length + (liked ? 1 : 0);
+              const liked = creation.likes.includes(userId);
+              const likeCount = creation.likes.length;
 
               return (
                 <article
@@ -110,7 +157,7 @@ const Community = () => {
                     className="aspect-[4/3] w-full object-cover"
                   />
                   <div className="p-4">
-                    <p className="line-clamp-3 min-h-18 text-sm leading-6 text-slate-600">
+                    <p className="line-clamp-3 min-h-18 break-words text-sm leading-6 text-slate-600">
                       {creation.prompt}
                     </p>
                     <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
@@ -147,7 +194,9 @@ const Community = () => {
               );
             })}
           </div>
-        ) : (
+        ) : null}
+
+        {!isLoading && !error && filteredCreations.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
             <p className="text-sm font-semibold text-slate-950">
               No creations found
@@ -156,7 +205,7 @@ const Community = () => {
               Try a different search term.
             </p>
           </div>
-        )}
+        ) : null}
       </section>
     </div>
   );

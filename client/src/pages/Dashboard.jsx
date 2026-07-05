@@ -7,24 +7,45 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
+import { useAuth } from "@clerk/react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import {
-  AiToolsData,
-  dummyCreationData,
-  dummyPublishedCreationData,
-} from "../assets/assets";
+import { useEffect, useState } from "react";
+import { AiToolsData } from "../assets/assets";
 import Markdown from "react-markdown";
+import { apiRequest } from "../lib/api";
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { getToken } = useAuth();
+  const [creations, setCreations] = useState([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [expandedIds, setExpandedIds] = useState([]);
 
-  const totalCreations =
-    dummyCreationData.length + dummyPublishedCreationData.length;
-  const publishedCount = dummyPublishedCreationData.length;
-  const articleCount = dummyCreationData.filter(
+  useEffect(() => {
+    const loadCreations = async () => {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const token = await getToken();
+        const data = await apiRequest("/api/ai/creations", { token });
+        setCreations(data.creations || []);
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCreations();
+  }, [getToken]);
+
+  const totalCreations = creations.length;
+  const publishedCount = creations.filter((creation) => creation.publish).length;
+  const articleCount = creations.filter(
     (creation) => creation.type === "article",
   ).length;
-  const imageCount = dummyPublishedCreationData.filter(
+  const imageCount = creations.filter(
     (creation) => creation.type === "image",
   ).length;
 
@@ -59,11 +80,9 @@ const Dashboard = () => {
     },
   ];
 
-  const recentCreations = [...dummyPublishedCreationData, ...dummyCreationData]
+  const recentCreations = [...creations]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 4);
-
-  const [expandedIds, setExpandedIds] = useState([]);
 
   const toggleExpand = (id) => {
     setExpandedIds((prev) =>
@@ -145,8 +164,8 @@ const Dashboard = () => {
         ))}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-slate-950">
@@ -182,7 +201,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="min-w-0 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-slate-950">
@@ -195,10 +214,28 @@ const Dashboard = () => {
           </div>
 
           <div className="mt-6 space-y-3">
+            {isLoading && (
+              <div className="rounded-xl border border-slate-100 p-4 text-sm text-slate-500">
+                Loading your latest creations...
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm font-medium text-rose-600">
+                {error}
+              </div>
+            )}
+
+            {!isLoading && !error && recentCreations.length === 0 && (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                Your saved creations will appear here.
+              </div>
+            )}
+
             {recentCreations.map((creation) => (
               <article
                 key={creation.id}
-                className="rounded-xl border border-slate-100 p-4 transition hover:border-primary/15 hover:bg-primary/3"
+                className="min-w-0 rounded-xl border border-slate-100 p-4 transition hover:border-primary/15 hover:bg-primary/3"
               >
                 <div className="flex gap-4">
                   {creation.type === "image" ? (
@@ -236,7 +273,7 @@ const Dashboard = () => {
                 </div>
 
                 {expandedIds.includes(creation.id) && (
-                  <div className="mt-3 border-t pt-3 text-sm text-slate-600">
+                  <div className="mt-3 min-w-0 border-t pt-3 text-sm text-slate-600">
                     {creation.type === "image" ? (
                       <img
                         src={creation.content}
@@ -244,7 +281,7 @@ const Dashboard = () => {
                         className="rounded-md object-cover h-40 w-full"
                       />
                     ) : (
-                      <div className="reset-tw prose">
+                      <div className="markdown-content">
                         <Markdown>{creation.content}</Markdown>
                       </div>
                     )}

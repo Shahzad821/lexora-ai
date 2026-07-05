@@ -32,7 +32,7 @@ export const PageHeader = ({
 );
 
 export const ToolCard = ({ title, description, icon: Icon, children }) => (
-  <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+  <section className="min-w-0 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
     <div className="mb-6 flex items-start gap-3">
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
         <Icon className="h-5 w-5" />
@@ -54,7 +54,7 @@ export const ResultPanel = ({
   icon: Icon,
   children,
 }) => (
-  <section className="flex min-h-[520px] flex-col rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+  <section className="flex min-h-[520px] min-w-0 flex-col rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
     <div className="mb-6 flex items-start justify-between gap-4">
       <div>
         <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
@@ -63,7 +63,7 @@ export const ResultPanel = ({
         )}
       </div>
     </div>
-    <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6">
+    <div className="flex min-w-0 flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 sm:p-6">
       {children || (
         <div className="max-w-sm text-center">
           {Icon && (

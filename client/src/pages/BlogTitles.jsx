@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@clerk/react";
 import { Copy, Hash, ListChecks, Send } from "lucide-react";
 import {
   FieldLabel,
@@ -7,6 +8,7 @@ import {
   ResultPanel,
   ToolCard,
 } from "../components/DashboardShell";
+import { apiRequest } from "../lib/api";
 
 const categories = ["General", "Technology", "Business", "Lifestyle"];
 const angles = [
@@ -21,6 +23,9 @@ const BlogTitles = () => {
   const [category, setCategory] = useState("Technology");
   const [angle, setAngle] = useState("Practical guide");
   const [titles, setTitles] = useState([]);
+  const [error, setError] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { getToken, isSignedIn } = useAuth();
 
   const handleKeywordChange = (event) => {
     setKeyword(event.target.value);
@@ -34,17 +39,35 @@ const BlogTitles = () => {
     setAngle(event.target.value);
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!keyword.trim()) return;
 
-    const cleanKeyword = keyword.trim();
-    setTitles([
-      `The ${angle} to ${cleanKeyword} for ${category} teams`,
-      `How ${cleanKeyword} is changing modern ${category.toLowerCase()}`,
-      `${cleanKeyword}: what to know before your next big decision`,
-      `A smarter way to think about ${cleanKeyword}`,
-      `${cleanKeyword} mistakes that slow growing teams down`,
-    ]);
+    if (!isSignedIn) {
+      setError("Please sign in to generate blog titles.");
+      return;
+    }
+
+    setError("");
+    setIsGenerating(true);
+
+    try {
+      const token = await getToken();
+      const data = await apiRequest("/api/ai/generate-blog-titles", {
+        method: "POST",
+        token,
+        body: {
+          keyword: keyword.trim(),
+          category,
+          angle,
+        },
+      });
+
+      setTitles(data.titles || []);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -56,7 +79,7 @@ const BlogTitles = () => {
         action="Saved ideas"
       />
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <ToolCard
           title="Title inputs"
           description="Pick a keyword, category, and angle for sharper headline options."
@@ -112,12 +135,18 @@ const BlogTitles = () => {
             Selected: {category} / {angle}
           </div>
 
+          {error && (
+            <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
+              {error}
+            </div>
+          )}
+
           <PrimaryButton
             icon={Send}
             onClick={handleGenerate}
-            disabled={!keyword.trim()}
+            disabled={!keyword.trim() || isGenerating}
           >
-            Generate titles
+            {isGenerating ? "Generating..." : "Generate titles"}
           </PrimaryButton>
         </ToolCard>
 
@@ -127,17 +156,17 @@ const BlogTitles = () => {
           emptyDescription="Lexora will return scannable headline options with different angles and strengths."
         >
           {titles.length > 0 && (
-            <div className="w-full space-y-3">
+            <div className="w-full min-w-0 space-y-3">
               {titles.map((title, index) => (
                 <article
                   key={title}
                   className="flex items-start justify-between gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-semibold text-primary">
                       Option {index + 1}
                     </p>
-                    <h3 className="mt-1 text-sm font-semibold leading-6 text-slate-800">
+                    <h3 className="mt-1 break-words text-sm font-semibold leading-6 text-slate-800">
                       {title}
                     </h3>
                   </div>
