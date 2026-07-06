@@ -137,7 +137,7 @@ const postClipdropForm = async (path, form) => {
     },
     body: form,
   });
-  console.log("Clipdrop response status:", response);
+
   if (!response.ok) {
     const message = await readProviderError(response);
     const error = new Error(message);
