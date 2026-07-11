@@ -5,6 +5,7 @@ import { PDFParse } from "pdf-parse";
 
 import sql from "../configs/db.js";
 import { v2 as cloudinary } from "cloudinary";
+import enforceUsageLimit from "../utils/enforceUsageLimit.js";
 
 const cleanEnv = (value) => value?.trim().replace(/^["']|["']$/g, "");
 
@@ -25,8 +26,6 @@ const lengthConfig = {
   Medium: { words: "900-1200", maxTokens: 3000 },
   Long: { words: "1500-2000", maxTokens: 4500 },
 };
-
-const freeLimit = Number(process.env.FREE_USAGE_LIMIT || 10);
 
 const assertPrompt = (prompt, max = 2000) => {
   if (!prompt || typeof prompt !== "string" || prompt.trim().length < 3) {
@@ -51,17 +50,6 @@ const chargeUsage = async (req) => {
   return nextUsage;
 };
 
-const enforceUsageLimit = (req, res) => {
-  if (req.plan !== "premium" && req.free_usage >= freeLimit) {
-    res.status(403).json({
-      error: "Free usage limit exceeded. Please upgrade to premium.",
-    });
-    return false;
-  }
-
-  return true;
-};
-
 const saveCreation = async ({
   userId,
   prompt,
@@ -78,10 +66,6 @@ const saveCreation = async ({
   return rows[0];
 };
 
-// Convert the raw image buffer into a base64 data URI, then hand that
-// straight to cloudinary.uploader.upload(). upload() accepts a base64 data
-// string directly as its first argument -- no stream/promise wrapper needed
-// the way upload_stream() requires.
 const bufferToDataUrl = (buffer, mimeType = "image/png") =>
   `data:${mimeType};base64,${buffer.toString("base64")}`;
 
