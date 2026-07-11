@@ -469,17 +469,19 @@ export const removeObject = async (req, res) => {
       return res.status(400).json({ error: "Image file is required." });
     }
 
-    if (!maskFile) {
-      return res.status(400).json({
-        error:
-          "Clipdrop cleanup requires a mask image named mask or mask_file.",
-      });
+    const { object = "selected object" } = req.body;
+    let imageBuffer;
+    let prompt;
+
+    if (maskFile) {
+      imageBuffer = await cleanupWithClipdrop({ imageFile, maskFile });
+      prompt = `Remove ${object} from ${imageFile.originalname}`;
+    } else {
+      imageBuffer = await removeBackgroundWithClipdrop(imageFile);
+      prompt = `Remove background from ${imageFile.originalname}`;
     }
 
-    const { object = "selected object" } = req.body;
-    const imageBuffer = await cleanupWithClipdrop({ imageFile, maskFile });
     const content = await uploadBase64Image(imageBuffer, "lexora/creations");
-    const prompt = `Remove ${object} from ${imageFile.originalname}`;
     const creation = await saveCreation({
       userId,
       prompt,

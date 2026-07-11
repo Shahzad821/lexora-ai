@@ -15,6 +15,8 @@ const brushSizes = ["Small", "Medium", "Large"];
 const RemoveObject = () => {
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState("");
+  const [maskFile, setMaskFile] = useState(null);
+  const [maskFileName, setMaskFileName] = useState("");
   const [preview, setPreview] = useState("");
   const [objectPrompt, setObjectPrompt] = useState("");
   const [brushSize, setBrushSize] = useState("Medium");
@@ -37,6 +39,14 @@ const RemoveObject = () => {
     setObjectPrompt(event.target.value);
   };
 
+  const handleMaskFileChange = (event) => {
+    const selectedMaskFile = event.target.files?.[0];
+    if (!selectedMaskFile) return;
+
+    setMaskFile(selectedMaskFile);
+    setMaskFileName(selectedMaskFile.name);
+  };
+
   const handleBrushSizeChange = (selectedBrushSize) => {
     setBrushSize(selectedBrushSize);
   };
@@ -55,6 +65,9 @@ const RemoveObject = () => {
     try {
       const formData = new FormData();
       formData.append("image", file);
+      if (maskFile) {
+        formData.append("mask", maskFile);
+      }
       formData.append("object", objectPrompt.trim());
       const token = await getToken();
       const data = await apiRequest("/api/ai/remove-object", {
@@ -115,6 +128,24 @@ const RemoveObject = () => {
                   type="file"
                   accept="image/*"
                   onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <div>
+              <FieldLabel>Optional mask file</FieldLabel>
+              <label className="flex min-h-20 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-4 text-center transition hover:border-primary hover:bg-primary/5">
+                <span className="text-sm font-semibold text-slate-950">
+                  {maskFileName || "Upload mask image"}
+                </span>
+                <span className="mt-1 text-xs text-slate-500">
+                  Optional: add a mask image to target the object more precisely
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleMaskFileChange}
                   className="hidden"
                 />
               </label>
