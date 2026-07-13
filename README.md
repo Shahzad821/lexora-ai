@@ -48,15 +48,18 @@ Here are three reserved spaces for your project screenshots:
 
 ### Image 1
 
-[Add screenshot here]
+<img width="1366" height="607" alt="lexora home page" src="https://github.com/user-attachments/assets/fd617726-d2fe-411e-bb68-4421d8edf33b" />
+
 
 ### Image 2
 
-[Add screenshot here]
+<img width="1362" height="606" alt="lexora dashboard" src="https://github.com/user-attachments/assets/3de252fd-00b2-4513-97c0-c737de9726a9" />
+
 
 ### Image 3
 
-[Add screenshot here]
+<img width="1366" height="608" alt="lexora community" src="https://github.com/user-attachments/assets/b910c16b-8df8-4125-b182-c1af9c8b8dd5" />
+
 
 ## Getting Started
 
